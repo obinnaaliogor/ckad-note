@@ -1,0 +1,120 @@
+Note since CKAD and CKA is almost the same concept, i will not go through the ones i already covered in CKA.
+
+1. Observability: 
+
+ReadinessProbe
+
+A pod has pod status and some conditions, the pods status tells us where the pod is in its life cycle,
+When the pod is first created, it goes into a pending state and this is when the scheduler trys to make decision as to which node to schedule the pod.
+When the pod is scheduled it goes into a containercreating status. Where the image for the application are pulled and the container starts.
+
+Then it goes into a running state, where the apps runs continously or terminates.
+
+Conditions complements pods status, its an array of true or false values.
+podscheduled ---> This can be true or false and same for the rest....
+initialized
+containersready
+ready
+
+These tells us the state of the pods.. 
+Run kubectl describe pod to check the conditions of the pod.
+
+Run kubectl get pods to check the status of the pod of which we are very much intrested in..
+When you have the pod and the containers as ready.. How does k8s know that the application or the container inside the pod is actually running or not?
+When you create a pod and expose it with a service, the service relys on the ready state of the pods to route traffic to it..
+Once the pods is in a ready state, traffic is automatically routed to it..
+
+By default, k8s assumes that as soon as the container is created, it is ready to server user traffic.
+So it sets the condition of each ready container to true.. 
+But what if the application inside the container takes time to boot or get ready and the service is unaware of this and sends traffic to the pod.
+Causing users to hit a pod that is not yet running a live application..
+
+What do we do to reslove this?
+
+We look for a way to tye the ready condition of the pod to the actual state of the application inside the container.
+You as the developer of the application, you kwn what it means for the application to be ready..
+
+To determine the actual state of the application inside the container and match it with the ready condition of the pod, we use probes.
+We achieve this using readinessProbe using:
+
+1. httpGet for a web application to check if the erver is up and running.
+2. For a database you can test if a particular tcpsocket is listening..
+3. You can run a custom script thatll execute successfully if the application is ready..
+
+Create a pod with readinessprobe, when the container is created, k8s does not immediatly set the ready condition of the pod to true..
+It performs a test to see if the application api inside the container responds accordingly.. As a result, service does not foward any traffic to the pod as it sees that the pod is not ready...
+
+
+WAYS OF CONFIGURING PROBES.
+
+1. This is for executing command inside of the container..
+readinessProbe:
+  exec:
+    command:
+    - cat
+    - /tmp/healthy
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  
+2. 
+readinessProbe:  --> HttpgET request of the application part, the port specified is the containerPort.
+      httpGet:
+        path: /healthz
+        port: 8080
+		
+		
+3. readinessProbe:  Checking for application health using tcpsocket
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 15
+      periodSeconds: 10
+		
+Check topic ---> State persistence
+Here youll find sts topic.
+-----------------------------
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes
+
+livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 80
+      periodSeconds: 1
+
+periodSeconds: 1
+initialDelaySeconds: 80
+The periodSeconds field specifies that the kubelet should perform a liveness probe every 1 seconds. The initialDelaySeconds field tells the kubelet that it should wait 80 seconds before performing the first probe.
+
+.......
+
+ readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /ready
+        port: 8080
+        scheme: HTTP
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
+	  
+.In the provided readinessProbe configuration for a container in a Kubernetes Pod:
+
+    failureThreshold: 3: This field specifies the number of consecutive failures needed for the probe to be considered failed. If the HTTP GET request to the specified path and port fails for three consecutive times, the container will be marked as not ready.
+
+    httpGet: This field defines an HTTP GET request to be used for the readiness probe.
+
+        path: /ready: This is the path to access for the HTTP GET request. The application within the container typically exposes a /ready endpoint to indicate its readiness.
+
+        port: 8080: This is the port on which the HTTP GET request will be made.
+
+        scheme: HTTP: This specifies the HTTP scheme for the request.
+
+    periodSeconds: 10: This field specifies the interval between consecutive readiness probes. In this case, the kubelet will perform a readiness probe every 10 seconds.
+
+    successThreshold: 1: This field specifies the number of consecutive successes needed for the probe to be considered successful. If the HTTP GET request to the specified path and port succeeds once, the container will be marked as ready.
+
+    timeoutSeconds: 1: This field specifies the maximum amount of time (in seconds) that the probe is allowed to take. If the HTTP GET request doesn't complete within 1 second, it will be considered a failure.
+
+These parameters collectively determine how the readiness probe behaves and influences the readiness status of the container.
+		
