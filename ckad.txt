@@ -1,6 +1,6 @@
 Note since CKAD and CKA is almost the same concept, i will not go through the ones i already covered in CKA.
 
-1. Observability: 
+1. Observability:
 
 ReadinessProbe
 
@@ -16,7 +16,7 @@ initialized
 containersready
 ready
 
-These tells us the state of the pods.. 
+These tells us the state of the pods..
 Run kubectl describe pod to check the conditions of the pod.
 
 Run kubectl get pods to check the status of the pod of which we are very much intrested in..
@@ -25,7 +25,7 @@ When you create a pod and expose it with a service, the service relys on the rea
 Once the pods is in a ready state, traffic is automatically routed to it..
 
 By default, k8s assumes that as soon as the container is created, it is ready to server user traffic.
-So it sets the condition of each ready container to true.. 
+So it sets the condition of each ready container to true..
 But what if the application inside the container takes time to boot or get ready and the service is unaware of this and sends traffic to the pod.
 Causing users to hit a pod that is not yet running a live application..
 
@@ -55,20 +55,20 @@ readinessProbe:
     - /tmp/healthy
   initialDelaySeconds: 5
   periodSeconds: 5
-  
-2. 
+
+2.
 readinessProbe:  --> HttpgET request of the application part, the port specified is the containerPort.
       httpGet:
         path: /healthz
         port: 8080
-		
-		
+
+
 3. readinessProbe:  Checking for application health using tcpsocket
       tcpSocket:
         port: 8080
       initialDelaySeconds: 15
       periodSeconds: 10
-		
+
 Check topic ---> State persistence
 Here youll find sts topic.
 -----------------------------
@@ -97,7 +97,7 @@ The periodSeconds field specifies that the kubelet should perform a liveness pro
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 1
-	  
+
 .In the provided readinessProbe configuration for a container in a Kubernetes Pod:
 
     failureThreshold: 3: This field specifies the number of consecutive failures needed for the probe to be considered failed. If the HTTP GET request to the specified path and port fails for three consecutive times, the container will be marked as not ready.
@@ -117,4 +117,255 @@ The periodSeconds field specifies that the kubelet should perform a liveness pro
     timeoutSeconds: 1: This field specifies the maximum amount of time (in seconds) that the probe is allowed to take. If the HTTP GET request doesn't complete within 1 second, it will be considered a failure.
 
 These parameters collectively determine how the readiness probe behaves and influences the readiness status of the container.
-		
+
+
+Admission Controllers:
+The authentication and authorization process for creation of pods and what users are allowed to do, does not go beyound the api level.
+What if you want to do more than define an access to what a user has to an object?
+EX:
+Perform actions like, check the image of a deployment or pods and deny actions of creating the pod when it has a tag of latest?
+Perform actions if the image is from private registry or certain registry
+Do not permit runAsRoot User
+Have certain capabilities
+The metadata always has labels
+
+All the above listed actions you would want to enforce cannot be acheived using RBAC.
+This is where admission controllers comes in.
+
+kubectl --> Authentication --> Authorization --> Admission controllers --> create pods.
+Admission controllers helps us enforce better security measures to enforce how a cluster is used..
+Apart from simply validating configurations, admission controllers can change the requests itself or perfrom additional operations b4 the pods gets created.
+
+Default admission controllers that comes with k8s:
+1. AlwaysPullimages
+2. DefaultStorageClass admission controller : observes the creation of pvcs and automatically adds storage class to them. i.e if sc wasnt defined in the pvc
+3. EventRateLimit --> sets limit to the requests the apiserver can receive at a time, this prevents the apiserver from been flooded by requests.
+4. NamespaceExist admission controller: Rejects requests to namespaces that do not exist..
+5. NamespaceAutoProvision Admission controller: This creates a namespace if they do not exist, it is not enabled by default.
+
+https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+
+VIEW ENABLED ADMISSION CONTROLLERS BY DEFAULT..
+kube-apiserver -h | grep enable-admission-plugins
+Run the above command inside the kube-apiserver pod if you set up your cluster using kubeadm but for native services setup, the above is ok
+
+Important:
+The Kubernetes API server flag disable-admission-plugins takes a comma-delimited list of admission control plugins to be disabled, even if they are in the list of plugins enabled by default.
+
+To add an admission controller, check the options in the kube-apiserver and add the following with comma separated values
+- --enable-admission-plugins=NodeRestrictions,NamespaceAutoProvision
+
+To disable admission controller use this flag
+- --disable-admission-plugins=DefaultStorageClass
+
+Important:
+The namespaceExist ADM and the NamespaceAutoProvision ADM has been deperacted and has been replaced by the namespaceLifeCycle admission controller.
+NamespaceLifeCycle: It ensures that requests to a non existing namespace is rejected and the default,kube-system and kube-public namespaces are not deleted.
+ps -ef | grep kube-apiserver | grep admission-plugins
+
+
+TYPES OF ADMISSION CONTROLLERS:
+kubectl --> Authentication --> Authorization --> Admission controllers --> create pods.
+Validating: Validates requests and allow or deny it.
+Mutating Admission Controllers: Changes the object b4 its created
+
+Important: Multating Admission controllers are invoked first b4 validating admission controllers.
+https://kubernetes.io/blog/2019/03/21/a-guide-to-kubernetes-admission-controllers/
+
+1. Create a webhook-server
+2. create a service for the webhook server
+
+Configure our cluster to reach the webhook server to validate/mutate our requests.
+For this we create a validating webook configuration object or MutatingWebhookConfiguration
+3. Create a validating webook configuration object:
+ex:
+MutatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: demo-webhook
+webhooks:
+  - name: webhook-server.webhook-demo.svc
+    clientConfig:
+      service:
+        name: webhook-server
+        namespace: webhook-demo
+        path: "/mutate"
+      caBundle: ${CA_PEM_B64}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+
+---
+References:
+
+    https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+    https://docs.okd.io/latest/architecture/additional_concepts/dynamic_admission_controllers.html
+    https://kubernetes.io/blog/2018/01/extensible-admission-is-beta/
+    https://medium.com/ibm-cloud/diving-into-kubernetes-mutatingadmissionwebhook-6ef3c5695f74
+    https://github.com/kubernetes/kubernetes/blob/v1.10.0-beta.1/test/images/webhook/main.go
+    https://github.com/istio/istio
+    https://www.stackrox.com/post/2019/02/the-runc-vulnerability-a-deep-dive-on-protecting-yourself/
+
+ValidatingWebhookConfiguration:
+https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: "pod-policy.example.com"
+webhooks:
+- name: "pod-policy.example.com"
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["v1"]
+    operations:  ["CREATE"]
+    resources:   ["pods"]
+    scope:       "Namespaced"
+  clientConfig:
+    service:
+      namespace: "example-namespace"
+      name: "example-service"
+    caBundle: <CA_BUNDLE>
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  timeoutSeconds: 5
+
+  1. Create a ns, k create ns webhook-demo
+  2. create tls secret
+  Usage:
+    kubectl create secret tls NAME --cert=path/to/cert/file --key=path/to/key/file
+  [--dry-run=server|client|none] [options]
+  k create secret tls webhook-server-tls -n webhook-demo --cert=/root/keys/webhook-server-tls.crt --key=/root/keys/webhook-server-tls.key
+  3.Create webhook deployment now.
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: webhook-server
+    namespace: webhook-demo
+    labels:
+      app: webhook-server
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: webhook-server
+    template:
+      metadata:
+        labels:
+          app: webhook-server
+      spec:
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1234
+        containers:
+        - name: server
+          image: stackrox/admission-controller-webhook-demo:latest
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8443
+            name: webhook-api
+          volumeMounts:
+          - name: webhook-tls-certs
+            mountPath: /run/secrets/tls
+            readOnly: true
+        volumes:
+        - name: webhook-tls-certs
+          secret:
+            secretName: webhook-server-tls
+			---
+4. Create webhook service now so that admission controller can communicate with webhook.
+5. added MutatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: demo-webhook
+webhooks:
+  - name: webhook-server.webhook-demo.svc
+    clientConfig:
+      service:
+        name: webhook-server
+        namespace: webhook-demo
+        path: "/mutate"
+      caBundle: LS0tLS1CRUxxxxx
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    admissionReviewVersions: ["v1beta1"]
+    sideEffects: None
+
+	API GROUPS:
+	Important: Only one version of api group can be enabled by default, however, you can create objects with diff api versions.
+	When you run k get deploy, which version of api will the command query? It will query the preferred version, so if the version preferred was v1.
+	It will return the objects created with api group version of v1.
+	ex:
+
+	➜  helm k explain po
+	KIND:       Pod
+	VERSION:    v1
+
+	It returns the preferred version.
+
+	k convert command:
+	https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+
+	---
+
+	Enable the v1alpha1 version for rbac.authorization.k8s.io API group on the controlplane node.
+
+	Note: If you made a mistake in the config file could result in the API server being unavailable and can break the cluster.
+	https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/
+	 - --runtime-config=rbac.authorization.k8s.io/v1alpha1
+	 --runtime-config=api/<version> where api = rbac.authorization.k8s.io and version = v1alpha1
+
+
+	 Enable Or Disable A Kubernetes API
+
+	 This page shows how to enable or disable an API version from your cluster's control plane.
+
+	 Specific API versions can be turned on or off by passing --runtime-config=api/<version> as a command line argument to the API server. The values for this argument are a comma-separated list of API versions. Later values override earlier values.
+
+	 The runtime-config command line argument also supports 2 special keys:
+
+	     api/all, representing all known APIs
+	     api/legacy, representing only legacy APIs. Legacy APIs are any APIs that have been explicitly deprecated.
+
+	 For example, to turn off all API versions except v1, pass --runtime-config=api/all=false,api/v1=true to the kube-apiserver
+
+
+
+	 2. Ingress manifest file is already given under the /root/ directory called ingress-old.yaml.
+
+With help of the kubectl convert command, change the deprecated API version to the networking.k8s.io/v1 and create the resource.
+cat ingress-old.yaml
+---
+# Deprecated API version
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /video-service
+        pathType: Prefix
+        backend:
+          serviceName: ingress-svc
+          servicePort: 80
+
+--
+kubectl convert --help
+kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1
+ kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1 > ingress-new.yaml
+
+ To get the preferred api version of a specific api say networking.k8s.io:
+ run
+ kubectl proxy 8001&
+ curl localhost:8001/apis/networking.k8s.io
