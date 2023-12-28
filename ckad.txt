@@ -1,6 +1,6 @@
 Note since CKAD and CKA is almost the same concept, i will not go through the ones i already covered in CKA.
 
-1. Observability:
+1. Observability: 
 
 ReadinessProbe
 
@@ -16,7 +16,7 @@ initialized
 containersready
 ready
 
-These tells us the state of the pods..
+These tells us the state of the pods.. 
 Run kubectl describe pod to check the conditions of the pod.
 
 Run kubectl get pods to check the status of the pod of which we are very much intrested in..
@@ -25,7 +25,7 @@ When you create a pod and expose it with a service, the service relys on the rea
 Once the pods is in a ready state, traffic is automatically routed to it..
 
 By default, k8s assumes that as soon as the container is created, it is ready to server user traffic.
-So it sets the condition of each ready container to true..
+So it sets the condition of each ready container to true.. 
 But what if the application inside the container takes time to boot or get ready and the service is unaware of this and sends traffic to the pod.
 Causing users to hit a pod that is not yet running a live application..
 
@@ -55,20 +55,20 @@ readinessProbe:
     - /tmp/healthy
   initialDelaySeconds: 5
   periodSeconds: 5
-
-2.
+  
+2. 
 readinessProbe:  --> HttpgET request of the application part, the port specified is the containerPort.
       httpGet:
         path: /healthz
         port: 8080
-
-
+		
+		
 3. readinessProbe:  Checking for application health using tcpsocket
       tcpSocket:
         port: 8080
       initialDelaySeconds: 15
       periodSeconds: 10
-
+		
 Check topic ---> State persistence
 Here youll find sts topic.
 -----------------------------
@@ -97,7 +97,7 @@ The periodSeconds field specifies that the kubelet should perform a liveness pro
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 1
-
+	  
 .In the provided readinessProbe configuration for a container in a Kubernetes Pod:
 
     failureThreshold: 3: This field specifies the number of consecutive failures needed for the probe to be considered failed. If the HTTP GET request to the specified path and port fails for three consecutive times, the container will be marked as not ready.
@@ -197,7 +197,7 @@ webhooks:
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
-
+		
 ---
 References:
 
@@ -232,7 +232,7 @@ webhooks:
   admissionReviewVersions: ["v1"]
   sideEffects: None
   timeoutSeconds: 5
-
+  
   1. Create a ns, k create ns webhook-demo
   2. create tls secret
   Usage:
@@ -297,7 +297,7 @@ webhooks:
         resources: ["pods"]
     admissionReviewVersions: ["v1beta1"]
     sideEffects: None
-
+	
 	API GROUPS:
 	Important: Only one version of api group can be enabled by default, however, you can create objects with diff api versions.
 	When you run k get deploy, which version of api will the command query? It will query the preferred version, so if the version preferred was v1.
@@ -307,22 +307,22 @@ webhooks:
 	➜  helm k explain po
 	KIND:       Pod
 	VERSION:    v1
-
+	
 	It returns the preferred version.
-
+	
 	k convert command:
 	https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
-
+	
 	---
-
+	
 	Enable the v1alpha1 version for rbac.authorization.k8s.io API group on the controlplane node.
 
 	Note: If you made a mistake in the config file could result in the API server being unavailable and can break the cluster.
 	https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/
 	 - --runtime-config=rbac.authorization.k8s.io/v1alpha1
 	 --runtime-config=api/<version> where api = rbac.authorization.k8s.io and version = v1alpha1
-
-
+	 
+	 
 	 Enable Or Disable A Kubernetes API
 
 	 This page shows how to enable or disable an API version from your cluster's control plane.
@@ -335,9 +335,9 @@ webhooks:
 	     api/legacy, representing only legacy APIs. Legacy APIs are any APIs that have been explicitly deprecated.
 
 	 For example, to turn off all API versions except v1, pass --runtime-config=api/all=false,api/v1=true to the kube-apiserver
-
-
-
+	 
+	 
+	 
 	 2. Ingress manifest file is already given under the /root/ directory called ingress-old.yaml.
 
 With help of the kubectl convert command, change the deprecated API version to the networking.k8s.io/v1 and create the resource.
@@ -359,13 +359,284 @@ spec:
         backend:
           serviceName: ingress-svc
           servicePort: 80
-
+		  
 --
 kubectl convert --help
 kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1
  kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1 > ingress-new.yaml
-
+ 
  To get the preferred api version of a specific api say networking.k8s.io:
  run
  kubectl proxy 8001&
  curl localhost:8001/apis/networking.k8s.io
+ 
+ 
+ ------------------------
+ Custom Resource Definition
+ CRD:
+ Controller: This is a process that runs on the background and continously monitor the status of the resources that its supposed to manage.
+ When we change, create or delete the resources it makes changes to match our actions.
+ 
+ custom resource and custom controller:
+ The resource we define, is the custom resources.
+ The controller we created to manage the custom resource is the custom controller
+ 
+ 1. crd - custom resource - custom controller.
+ The crd defines how the custom resources should be created, and the custom controller ensure the desired state is maintained.
+ https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
+ 
+ Create a CustomResourceDefinition
+
+ When you create a new CustomResourceDefinition (CRD), the Kubernetes API Server creates a new RESTful resource path for each version you specify. The custom resource created from a CRD object can be either namespaced or cluster-scoped, as specified in the CRD's spec.scope field. As with existing built-in objects, deleting a namespace deletes all custom objects in that namespace. CustomResourceDefinitions themselves are non-namespaced and are available to all namespaces.
+
+ For example, if you save the following CustomResourceDefinition to resourcedefinition.yaml:
+ 
+ apiVersion: apiextensions.k8s.io/v1
+ kind: CustomResourceDefinition
+ metadata:
+   # name must match the spec fields below, and be in the form: <plural>.<group>
+   name: crontabs.stable.example.com
+ spec:
+   # group name to use for REST API: /apis/<group>/<version>
+   group: stable.example.com
+   # list of versions supported by this CustomResourceDefinition
+   versions:
+     - name: v1
+       # Each version can be enabled/disabled by Served flag.
+       served: true
+       # One and only one version must be marked as the storage version.
+       storage: true
+       schema:
+         openAPIV3Schema:
+           type: object
+           properties:
+             spec:
+               type: object
+               properties:
+                 cronSpec:
+                   type: string
+                 image:
+                   type: string
+                 replicas:
+                   type: integer
+   # either Namespaced or Cluster
+   scope: Namespaced
+   names:
+     # plural name to be used in the URL: /apis/<group>/<version>/<plural>
+     plural: crontabs
+     # singular name to be used as an alias on the CLI and for display
+     singular: crontab
+     # kind is normally the CamelCased singular type. Your resource manifests use this.
+     kind: CronTab
+     # shortNames allow shorter string to match your resource on the CLI
+     shortNames:
+     - ct
+	 
+	 operatorhub.io
+	 
+	 
+JOBS:
+Activate deadline sec:
+https://kubernetes.io/docs/concepts/workloads/controllers/job/
+Another way to terminate a Job is by setting an active deadline. Do this by setting the .spec.activeDeadlineSeconds field of the Job to a number of seconds. The activeDeadlineSeconds applies to the duration of the job, no matter how many Pods are created. Once a Job reaches activeDeadlineSeconds, all of its running Pods are terminated and the Job status will become type: Failed with reason: DeadlineExceeded.
+
+Note that a Job's .spec.activeDeadlineSeconds takes precedence over its .spec.backoffLimit. Therefore, a Job that is retrying one or more failed Pods will not deploy additional Pods once it reaches the time limit specified by activeDeadlineSeconds, even if the backoffLimit is not yet reached.
+
+IQ:
+Create a cronjob called dice that runs every one minute. Use the Pod template located at /root/throw-a-dice. The image throw-dice randomly returns a value between 1 and 6. The result of 6 is considered success and all others are failure.
+
+The job should be non-parallel and complete the task once. Use a backoffLimit of 25.
+
+If the task is not completed within 20 seconds the job should fail and pods should be terminated.
+
+You don't have to wait for the job completion. As long as the cronjob has been created as per the requirements.
+
+Cronjobs---> used to run jobs
+Jobs ---> Holds containers
+
+----
+CRD IQ:
+
+Define a Kubernetes custom resource definition (CRD) for a new resource kind called Foo (plural form - foos) in the samplecontroller.k8s.io group.
+
+This CRD should have a version of v1alpha1 with a schema that includes two properties as given below:
+
+    deploymentName (a string type) and replicas (an integer type with minimum value of 1 and maximum value of 5).
+
+
+
+It should also include a status subresource which enables retrieving and updating the status of Foo object, including the availableReplicas property, which is an integer type.
+The Foo resource should be namespace scoped.
+
+
+Note: We have provided a template /root/foo-crd-aecs.yaml for your ease. There are few issues with it so please make sure to incorporate the above requirements before deploying on cluster. 
+
+---
+student-node ~ ➜  kubectl config use-context cluster3
+Switched to context "cluster3".
+
+student-node ~ ➜  vim foo-crd-aecs.yaml
+
+student-node ~ ➜  cat foo-crd-aecs.yaml 
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: foos.samplecontroller.k8s.io
+  annotations:
+    "api-approved.kubernetes.io": "unapproved, experimental-only"
+spec:
+  group: samplecontroller.k8s.io
+  scope: Namespaced
+  names:
+    kind: Foo
+    plural: foos
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        # schema used for validation
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              # Spec for schema goes here !
+              type: object
+              properties:
+                deploymentName:
+                  type: string
+                replicas:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+            status:
+              type: object
+              properties:
+                availableReplicas:
+                  type: integer
+      # subresources for the custom resource
+      subresources:
+        # enables the status subresource
+        status: {}
+
+student-node ~ ➜  kubectl apply -f foo-crd-aecs.yaml
+customresourcedefinition.apiextensions.k8s.io/foos.samplecontroller.k8s.io created
+
+How to exec into a specific container in a pod.
+How to get logs of a specific container in a pod
+
+IQ.
+QOS:
+ k get po -n ckad17-nqoss-aecs -o custom-columns='NAME:.metadata.name,QOS:.status.qosClass'
+
+
+IQ:
+
+Create a ConfigMap named ckad04-config-multi-env-files-aecs in the default namespace from the files provided at /root/ckad04-multi-cm directory.
+
+ubectl create configmap ckad04-config-multi-env-files-aecs \
+         --from-env-file=/root/ckad04-multi-cm/file1.properties \
+         --from-env-file=/root/ckad04-multi-cm/file2.properties
+		 
+API GATEWAY:
+https://kubernetes.io/docs/concepts/services-networking/gateway/
+
+Meaning: But for better SEO practices, you are requested to change the URLs at which the applications are made available.
+
+
+JOB:
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: learning-every-minute
+  namespace: ckad-job
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: learning-every-minute
+            image: busybox:1.28
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - echo I am practicing for CKAD certification
+          restartPolicy: OnFailure
+		  
+		  https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
+
+
+IQ:
+
+
+
+In the ckad-job namespace, create a job named very-long-pi that simply computes a π (pi) to 1024 places and prints it out.
+
+This job should be configured to retry maximum 5 times before marking this job failed, and the duration of this job should not exceed 100 seconds.
+
+
+
+Use perl:5.34.0 image for your container.
+SOLU:
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: very-long-pi
+  namespace: ckad-job
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 100
+  template:
+    spec:
+      containers:
+      - name: very-long-pi
+        image: perl:5.34.0
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(1024)"]
+      restartPolicy: Never
+	  ---
+	  
+	  
+..
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: ckad-multi-containers
+  name: ckad-sidecar-pod
+spec:
+  containers:
+    - image: nginx:1.16
+      name: main-container
+      resources: {}
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: my-vol
+          mountPath: /usr/share/nginx/html
+    - image: busybox:1.28
+      command:
+        - /bin/sh
+        - -c
+        - while true; do echo $(date -u) Hi I am from Sidecar container >> /var/log/index.html; sleep 5;done
+      name: sidecar-container
+      resources: {}
+      volumeMounts:
+        - name: my-vol
+          mountPath: /var/log
+  dnsPolicy: Default
+  volumes:
+    - name: my-vol
+      emptyDir: {}
+	  
+LOGGING:
+https://kubernetes.io/docs/concepts/cluster-administration/logging/
+https://kubernetes.io/docs/concepts/cluster-administration/logging/
+https://kubernetes.io/docs/concepts/cluster-administration/system-logs/
+
+RUN TEMP POD:
+➜ k run tmp --restart=Never --rm -i --image=nginx:alpine
+
+NETPOL:
+https://editor.networkpolicy.io/
