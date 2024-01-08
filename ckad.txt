@@ -1,6 +1,6 @@
 Note since CKAD and CKA is almost the same concept, i will not go through the ones i already covered in CKA.
 
-1. Observability: 
+1. Observability:
 
 ReadinessProbe
 
@@ -16,7 +16,7 @@ initialized
 containersready
 ready
 
-These tells us the state of the pods.. 
+These tells us the state of the pods..
 Run kubectl describe pod to check the conditions of the pod.
 
 Run kubectl get pods to check the status of the pod of which we are very much intrested in..
@@ -25,7 +25,7 @@ When you create a pod and expose it with a service, the service relys on the rea
 Once the pods is in a ready state, traffic is automatically routed to it..
 
 By default, k8s assumes that as soon as the container is created, it is ready to server user traffic.
-So it sets the condition of each ready container to true.. 
+So it sets the condition of each ready container to true..
 But what if the application inside the container takes time to boot or get ready and the service is unaware of this and sends traffic to the pod.
 Causing users to hit a pod that is not yet running a live application..
 
@@ -55,20 +55,20 @@ readinessProbe:
     - /tmp/healthy
   initialDelaySeconds: 5
   periodSeconds: 5
-  
-2. 
+
+2.
 readinessProbe:  --> HttpgET request of the application part, the port specified is the containerPort.
       httpGet:
         path: /healthz
         port: 8080
-		
-		
+
+
 3. readinessProbe:  Checking for application health using tcpsocket
       tcpSocket:
         port: 8080
       initialDelaySeconds: 15
       periodSeconds: 10
-		
+
 Check topic ---> State persistence
 Here youll find sts topic.
 -----------------------------
@@ -97,7 +97,7 @@ The periodSeconds field specifies that the kubelet should perform a liveness pro
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 1
-	  
+
 .In the provided readinessProbe configuration for a container in a Kubernetes Pod:
 
     failureThreshold: 3: This field specifies the number of consecutive failures needed for the probe to be considered failed. If the HTTP GET request to the specified path and port fails for three consecutive times, the container will be marked as not ready.
@@ -197,7 +197,7 @@ webhooks:
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
-		
+
 ---
 References:
 
@@ -232,7 +232,7 @@ webhooks:
   admissionReviewVersions: ["v1"]
   sideEffects: None
   timeoutSeconds: 5
-  
+
   1. Create a ns, k create ns webhook-demo
   2. create tls secret
   Usage:
@@ -297,7 +297,7 @@ webhooks:
         resources: ["pods"]
     admissionReviewVersions: ["v1beta1"]
     sideEffects: None
-	
+
 	API GROUPS:
 	Important: Only one version of api group can be enabled by default, however, you can create objects with diff api versions.
 	When you run k get deploy, which version of api will the command query? It will query the preferred version, so if the version preferred was v1.
@@ -307,22 +307,22 @@ webhooks:
 	➜  helm k explain po
 	KIND:       Pod
 	VERSION:    v1
-	
+
 	It returns the preferred version.
-	
+
 	k convert command:
 	https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
-	
+
 	---
-	
+
 	Enable the v1alpha1 version for rbac.authorization.k8s.io API group on the controlplane node.
 
 	Note: If you made a mistake in the config file could result in the API server being unavailable and can break the cluster.
 	https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/
 	 - --runtime-config=rbac.authorization.k8s.io/v1alpha1
 	 --runtime-config=api/<version> where api = rbac.authorization.k8s.io and version = v1alpha1
-	 
-	 
+
+
 	 Enable Or Disable A Kubernetes API
 
 	 This page shows how to enable or disable an API version from your cluster's control plane.
@@ -335,9 +335,9 @@ webhooks:
 	     api/legacy, representing only legacy APIs. Legacy APIs are any APIs that have been explicitly deprecated.
 
 	 For example, to turn off all API versions except v1, pass --runtime-config=api/all=false,api/v1=true to the kube-apiserver
-	 
-	 
-	 
+
+
+
 	 2. Ingress manifest file is already given under the /root/ directory called ingress-old.yaml.
 
 With help of the kubectl convert command, change the deprecated API version to the networking.k8s.io/v1 and create the resource.
@@ -359,38 +359,39 @@ spec:
         backend:
           serviceName: ingress-svc
           servicePort: 80
-		  
+
 --
 kubectl convert --help
 kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1
  kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1 > ingress-new.yaml
- 
+
  To get the preferred api version of a specific api say networking.k8s.io:
  run
  kubectl proxy 8001&
  curl localhost:8001/apis/networking.k8s.io
- 
- 
+
+
+
  ------------------------
  Custom Resource Definition
  CRD:
  Controller: This is a process that runs on the background and continously monitor the status of the resources that its supposed to manage.
  When we change, create or delete the resources it makes changes to match our actions.
- 
+
  custom resource and custom controller:
  The resource we define, is the custom resources.
  The controller we created to manage the custom resource is the custom controller
- 
+
  1. crd - custom resource - custom controller.
  The crd defines how the custom resources should be created, and the custom controller ensure the desired state is maintained.
  https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
- 
+
  Create a CustomResourceDefinition
 
  When you create a new CustomResourceDefinition (CRD), the Kubernetes API Server creates a new RESTful resource path for each version you specify. The custom resource created from a CRD object can be either namespaced or cluster-scoped, as specified in the CRD's spec.scope field. As with existing built-in objects, deleting a namespace deletes all custom objects in that namespace. CustomResourceDefinitions themselves are non-namespaced and are available to all namespaces.
 
  For example, if you save the following CustomResourceDefinition to resourcedefinition.yaml:
- 
+
  apiVersion: apiextensions.k8s.io/v1
  kind: CustomResourceDefinition
  metadata:
@@ -431,10 +432,10 @@ kubectl convert -f ingress-old.yaml --output-version networking.k8s.io/v1
      # shortNames allow shorter string to match your resource on the CLI
      shortNames:
      - ct
-	 
+
 	 operatorhub.io
-	 
-	 
+
+
 JOBS:
 Activate deadline sec:
 https://kubernetes.io/docs/concepts/workloads/controllers/job/
@@ -469,7 +470,7 @@ It should also include a status subresource which enables retrieving and updatin
 The Foo resource should be namespace scoped.
 
 
-Note: We have provided a template /root/foo-crd-aecs.yaml for your ease. There are few issues with it so please make sure to incorporate the above requirements before deploying on cluster. 
+Note: We have provided a template /root/foo-crd-aecs.yaml for your ease. There are few issues with it so please make sure to incorporate the above requirements before deploying on cluster.
 
 ---
 student-node ~ ➜  kubectl config use-context cluster3
@@ -477,7 +478,7 @@ Switched to context "cluster3".
 
 student-node ~ ➜  vim foo-crd-aecs.yaml
 
-student-node ~ ➜  cat foo-crd-aecs.yaml 
+student-node ~ ➜  cat foo-crd-aecs.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -537,7 +538,7 @@ Create a ConfigMap named ckad04-config-multi-env-files-aecs in the default names
 ubectl create configmap ckad04-config-multi-env-files-aecs \
          --from-env-file=/root/ckad04-multi-cm/file1.properties \
          --from-env-file=/root/ckad04-multi-cm/file2.properties
-		 
+
 API GATEWAY:
 https://kubernetes.io/docs/concepts/services-networking/gateway/
 
@@ -565,7 +566,7 @@ spec:
             - -c
             - echo I am practicing for CKAD certification
           restartPolicy: OnFailure
-		  
+
 		  https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
 
 
@@ -597,8 +598,8 @@ spec:
         command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(1024)"]
       restartPolicy: Never
 	  ---
-	  
-	  
+
+
 ..
 apiVersion: v1
 kind: Pod
@@ -629,7 +630,7 @@ spec:
   volumes:
     - name: my-vol
       emptyDir: {}
-	  
+
 LOGGING:
 https://kubernetes.io/docs/concepts/cluster-administration/logging/
 https://kubernetes.io/docs/concepts/cluster-administration/logging/
